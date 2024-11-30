@@ -30,6 +30,8 @@ const GameComponent = () => {
     let score = 0;
     let gameOver = false;
     let scoreText;
+    let gameOverText;
+    let restartButton;
 
     function preload() {
       this.load.image('sky', 'assets/sky.png');
@@ -70,11 +72,10 @@ const GameComponent = () => {
         child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
       });
 
-      // Bombs - modified to create initial bomb
+      // Bombs
       bombs = this.physics.add.group();
-      // Create initial bomb
       const initialBomb = bombs.create(400, 16, 'bomb');
-      initialBomb.setScale(2); // Make bomb twice as big
+      initialBomb.setScale(2);
       initialBomb.setBounce(1);
       initialBomb.setCollideWorldBounds(true);
       initialBomb.setVelocity(Phaser.Math.Between(-100, 100), 10);
@@ -85,6 +86,26 @@ const GameComponent = () => {
         fontSize: '32px', 
         fill: '#FFF' 
       });
+
+      // Game Over Text (hidden initially)
+      gameOverText = this.add.text(400, 250, '게임 오버', {
+        fontSize: '64px',
+        fill: '#000',
+        fontWeight: 'bold'
+      });
+      gameOverText.setOrigin(0.5);
+      gameOverText.setVisible(false);
+
+      // Restart Button (hidden initially)
+      restartButton = this.add.text(400, 350, '다시 해볼까요?', {
+        fontSize: '32px',
+        fill: '#000',
+        padding: { y: 10 }
+      });
+      restartButton.setOrigin(0.5);
+      restartButton.setInteractive({ useHandCursor: true });
+      restartButton.on('pointerdown', restartGame, this);
+      restartButton.setVisible(false);
 
       // Collisions
       this.physics.add.collider(player, platforms);
@@ -129,7 +150,7 @@ const GameComponent = () => {
           : Phaser.Math.Between(0, 400);
 
         const bomb = bombs.create(x, 16, 'bomb');
-        bomb.setScale(2); // Make new bombs twice as big too
+        bomb.setScale(2);
         bomb.setBounce(1);
         bomb.setCollideWorldBounds(true);
         bomb.setVelocity(Phaser.Math.Between(-100, 100), 10);
@@ -141,6 +162,48 @@ const GameComponent = () => {
       this.physics.pause();
       player.setTint(0xff0000);
       gameOver = true;
+      gameOverText.setText('최종 점수: ' + score);
+      
+      // Show game over text and restart button
+      gameOverText.setVisible(true);
+      restartButton.setVisible(true);
+    }
+
+    function restartGame() {
+      // Reset game state
+      gameOver = false;
+      score = 0;
+      
+      // Hide game over text and restart button
+      gameOverText.setVisible(false);
+      restartButton.setVisible(false);
+      
+      // Reset player
+      player.setTint(0xffffff);
+      player.setX(100);
+      player.setY(450);
+      
+      // Clear existing bombs
+      bombs.clear(true, true);
+      
+      // Create initial bomb
+      const bomb = bombs.create(400, 16, 'bomb');
+      bomb.setScale(2);
+      bomb.setBounce(1);
+      bomb.setCollideWorldBounds(true);
+      bomb.setVelocity(Phaser.Math.Between(-100, 100), 10);
+      bomb.allowGravity = false;
+      
+      // Reset stars
+      stars.children.iterate((child) => {
+        child.enableBody(true, child.x, 0, true, true);
+      });
+      
+      // Reset score
+      scoreText.setText('Score: 0');
+      
+      // Resume physics
+      this.physics.resume();
     }
 
     // Create game instance
