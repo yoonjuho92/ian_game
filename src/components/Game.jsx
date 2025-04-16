@@ -60,11 +60,11 @@ const GameComponent = () => {
 
       createStars() {
         this.stars = this.physics.add.group({
-          key: 'star',
+          key: this.starKey,   // <- dynamically assigned
           repeat: 11,
           setXY: { x: 12, y: 0, stepX: 70 }
         });
-
+      
         this.stars.children.iterate((child) => {
           child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
         });
@@ -168,12 +168,7 @@ const GameComponent = () => {
           });
         }
 
-        if (this.stars.countActive(true) === 0) {
-          this.stars.children.iterate((child) => {
-            child.enableBody(true, child.x, 0, true, true);
-          });
-          this.createNewBomb();
-        }
+
       }
 
       hitBomb(player, bomb) {
@@ -188,7 +183,7 @@ const GameComponent = () => {
       }
 
       restartGame() {
-        this.scene.restart({ score: 0 });
+        this.scene.restart(Level1, { score: 0 });
       }
 
       goToNextLevel() {
@@ -203,13 +198,14 @@ const GameComponent = () => {
         super({ key: 'Level1' });
         this.backgroundKey = 'sky1';
         this.bombKey = 'bomb1';
-        this.targetScore = 240;
+        this.targetScore = 120;
+        this.starKey = 'star1'; 
         this.nextLevel = 'Level2';
       }
     
       loadLevelAssets() {
         this.load.image('sky1', 'assets/sky.png');
-        this.load.image('star', 'assets/star.png');
+        this.load.image('star1', 'assets/star.png');
         this.load.image('bomb1', 'assets/bomb1.png');
       }
     }
@@ -219,14 +215,101 @@ const GameComponent = () => {
         super({ key: 'Level2' });
         this.backgroundKey = 'sky2';
         this.bombKey = 'bomb2'; 
-        this.targetScore = 480;
+        this.targetScore = 240;
+        this.starKey = 'star2'; 
         this.nextLevel = 'Level3';
       }
     
       loadLevelAssets() {
         this.load.image('sky2', 'assets/sky2.png');
-        this.load.image('star', 'assets/star2.png');
+        this.load.image('star2', 'assets/star.png');
         this.load.image('bomb2', 'assets/bomb2.png');
+      }
+    }
+
+    class Level3 extends BaseLevel {
+      constructor() {
+        super({ key: 'Level3' });
+        this.backgroundKey = 'sky3';
+        this.bombKey = 'bomb3'; 
+        this.targetScore = 360;
+        this.starKey = 'star3';  
+        this.nextLevel = 'Level4';
+      }
+    
+      loadLevelAssets() {
+        this.load.image('sky3', 'assets/sky3.png');
+        this.load.image('star3', 'assets/star3.png');
+        this.load.image('bomb3', 'assets/bomb3.png');
+      }
+    }
+
+    class Level4 extends BaseLevel {
+      constructor() {
+        super({ key: 'Level4' });
+        this.backgroundKey = 'sky4';
+        this.bombKey = 'bomb4';
+        this.starKey = 'star4';
+        this.targetScore = 600; // 24 stars * 10
+        this.bombGrowthSteps = 0;
+        this.totalStarsCollected = 0;
+      }
+    
+      loadLevelAssets() {
+        this.load.image('sky4', 'assets/sky4.png');
+        this.load.image('star4', 'assets/star4.png');
+        this.load.image('bomb4', 'assets/bomb4.png');
+        this.load.image('friend', 'assets/friend.png');
+      }
+    
+      createNewBomb() {
+        const x = (this.player.x < 400)
+          ? Phaser.Math.Between(400, 800)
+          : Phaser.Math.Between(0, 400);
+    
+        const bomb = this.bombs.create(x, 16, this.bombKey);
+        bomb.setBounce(1);
+        bomb.setCollideWorldBounds(true);
+        bomb.setVelocity(Phaser.Math.Between(-100, 100), 10);
+        bomb.allowGravity = false;
+    
+        return bomb;
+      }
+    
+      collectStar(player, star) {
+        star.disableBody(true, true);
+        this.score += 10;
+        this.totalStarsCollected++;
+        this.scoreText.setText('Score: ' + this.score);
+    
+        // bomb 크기 키우기 (4개 단위)
+        if (this.totalStarsCollected % 4 === 0) {
+          this.bombs.children.iterate((bomb) => {
+            const currentScale = bomb.scaleX;
+            bomb.setScale(currentScale + 0.3);
+          });
+        }
+    
+        // friend 등장 & 종료
+        if (this.totalStarsCollected === 24) {
+          this.bombs.clear(true, true); // bomb 전부 제거
+          this.friend = this.add.image(400, 300, 'friend');
+          this.friend.setScale(0.5);
+          const congratsText = this.add.text(400, 500, '적을 피해서 모든 보물을 모았어요!\n친구를 만났어요! 게임 클리어 🎉', {
+            fontSize: '32px',
+            fill: '#fff',
+            align: 'center'
+          });
+          congratsText.setOrigin(0.5);
+          this.physics.pause();
+        }
+    
+        // 별 모두 먹었을 경우 다시 생성
+        if (this.stars.countActive(true) === 0 && this.score < 600) {
+          this.stars.children.iterate((child) => {
+            child.enableBody(true, child.x, 0, true, true);
+          });
+        }
       }
     }
 
@@ -242,7 +325,7 @@ const GameComponent = () => {
           debug: false
         }
       },
-      scene: [Level1, Level2]
+      scene: [Level1, Level2, Level3, Level4]
     };
 
     const game = new Phaser.Game(config);
